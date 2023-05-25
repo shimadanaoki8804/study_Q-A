@@ -12,9 +12,7 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain.llms import OpenAI
 import tempfile
 
-from dotenv import load_dotenv
-load_dotenv()
-openai.api_key = os.environ['OPENAI_API_KEY']
+os.environ["OPENAI_API_KEY"] = st.secrets['api_key']
 
 #テンプレートの用意
 template_qa = """
