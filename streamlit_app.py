@@ -1,5 +1,6 @@
 import streamlit as st
 import os
+import openai
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
@@ -11,7 +12,9 @@ from langchain.chains.summarize import load_summarize_chain
 from langchain.llms import OpenAI
 import tempfile
 
-os.environ["OPENAI_API_KEY"] = st.secrets["api_key"]
+from dotenv import load_dotenv
+# 環境変数の読み込み
+load_dotenv()
 
 #テンプレートの用意
 template_qa = """
