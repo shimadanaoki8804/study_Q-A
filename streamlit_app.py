@@ -14,7 +14,8 @@ import tempfile
 
 from dotenv import load_dotenv
 # 環境変数の読み込み
-#load_dotenv()
+load_dotenv()
+
 api_key = os.getenv("OPENAI_API_KEY")
 os.environ["OPENAI_API_KEY"] = api_key
 
