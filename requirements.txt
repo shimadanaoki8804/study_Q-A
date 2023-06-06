@@ -8,3 +8,4 @@ streamlit==1.20.0
 tiktoken==0.3.3
 tokenizers==0.13.3
 python-dotenv==1.0.0
+pdfminer.six==20221105
