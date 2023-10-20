@@ -38,7 +38,13 @@ def extract_text_from_pdf(file_path):
     text = text.replace("I N T R O D U C T I O N", "Introduction")
     text = text.replace("introduction", "Introduction")
     text = text.replace("i n t r o d u c t i o n", "Introduction")
-    return text
+
+    # "Abstract" セクションのテキストを抽出
+    abstract_start = text.find("Abstract")
+    abstract_end = text.find("Introduction")
+    abstract_text = text[abstract_start:abstract_end]
+
+    return abstract_text
     
 
 st.title("論文ヘルパー(英語のみ)")
@@ -52,7 +58,7 @@ if uploaded_file is not None:
     #PDFの読み込み
     loader = PyPDFLoader(temp_file_path)
     documents = loader.load()
-    text = extract_text_from_pdf(temp_file_path)
+    abstract_text = extract_text_from_pdf(temp_file_path)
    
     # 処理が終わったら、一時ファイルを削除
     os.unlink(temp_file_path)
@@ -114,7 +120,7 @@ if uploaded_file is not None:
                     )
 
             #辞書型で定義する
-            sentence = overall_chain({'abstract': text})
+            sentence = overall_chain({'abstract': abstract_text})
 
             #各文章を取得
             abstract = sentence['abstract']
