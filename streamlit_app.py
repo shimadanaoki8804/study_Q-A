@@ -30,6 +30,14 @@ def save_uploaded_file(uploaded_file):
 def extract_text_from_pdf(file_path):
     text = extract_text(file_path)
     text = text.replace("A B S T R A C T", "Abstract")
+    text = text.replace("ABSTRACT", "Abstract")
+    text = text.replace("A B S T R A C T", "Abstract")
+    text = text.replace("abstract", "Abstract")
+    text = text.replace("a b s t r a c t", "Abstract")
+    text = text.replace("INTRODUCTION", "Introduction")
+    text = text.replace("I N T R O D U C T I O N", "Introduction")
+    text = text.replace("introduction", "Introduction")
+    text = text.replace("i n t r o d u c t i o n", "Introduction")
     return text
     
 
@@ -52,23 +60,21 @@ if uploaded_file is not None:
     # ラジオボタンで「要約」や「質問」の選択肢を作成
     option = st.radio("実行したい処理を選択してください", ("Abstractの翻訳","要約", "質問"))
 
-    # 実行ボタンを作成
+ # 実行ボタンを作成
     if option == "Abstractの翻訳":
         st.write("Abstractを抽出して翻訳を行います")
-        st.write("校正が要約みたいになることもあります")
         if st.button("実行"):
 
-            #Abstractの部分を抽出
-            text_abs = text[text.find("Abstract"):text.find("Introduction")]
-            llm_abs = ChatOpenAI(model_name='gpt-3.5-turbo')
+            #LLMの定義
+            llm_abstract = ChatOpenAI(model_name='gpt-3.5-turbo', temperature=0)
 
-            #abstractを翻訳
+            #abstractを翻訳するプロンプト
             template = """
-            あなたは優秀な翻訳家です。
-            以下の文章を英語から日本語に翻訳してください。
+                    あなたは優秀な翻訳家です。
+                    以下の文章を英語から日本語に翻訳してください。
 
-            文章：{abstract}
-            """
+                    文章：{abstract}
+                    """
 
             prompt_template = PromptTemplate(
                     input_variables=['abstract'], 
@@ -76,18 +82,18 @@ if uploaded_file is not None:
                     )
 
             abstract_chain = LLMChain(
-                    llm=llm_abs, 
+                    llm=llm_abstract, 
                     prompt=prompt_template, 
                     output_key="translation" #output_keyを指定して次のチェインに入力する
                     )
             
-            #翻訳した文章を校正
+            #まとめを作成するプロンプト
             template = """
-            あなたは優秀な校正者です。
-            以下の文章を校正してください。
+                    あなたは優秀なアシスタントです。
+                    以下の文章を一言でまとめてください。
 
-            文章：{translation}
-            """
+                    文章：{translation}
+                    """
 
             prompt_template = PromptTemplate(
                     input_variables=['translation'], 
@@ -95,75 +101,72 @@ if uploaded_file is not None:
                     )
 
             translation_chain = LLMChain(
-                    llm=llm_abs, 
+                    llm=llm_abstract, 
                     prompt=prompt_template, 
-                    output_key="calibration"
+                    output_key="single_word"
                     )
             
             #chainの作成
             overall_chain = SequentialChain(
                     chains=[abstract_chain, translation_chain],
                     input_variables=['abstract'],
-                    output_variables=["translation", "calibration"], #複数の変数を返す
+                    output_variables=["translation", "single_word"], #複数の変数を返す
                     )
 
             #辞書型で定義する
-            sentence = overall_chain({'abstract': text_abs})
+            sentence = overall_chain({'abstract': text})
 
             #各文章を取得
             abstract = sentence['abstract']
             translation = sentence['translation']
-            calibration = sentence['calibration']
+            single_word = sentence['single_word']
 
-            st.write(f'校正：{calibration}')
-            st.write(f'翻訳：{translation}')
             st.write(f'原文：{abstract}')
+            st.write(f'翻訳：{translation}')
+            st.write(f'まとめ：{single_word}')
+
 
 
     if option == "要約":
-        st.write("文章を分割して要約を行います")
-        st.write("時間かかります……")
+        st.write("論文全体の要約を行います")
+        st.write("かなり時間かかります……")
 
         # ユーザーにパラメータを入力させる
-        temperature = st.slider('出力の多様性', 0.0, 1.0, 0.0) # 初期値を0.0に設定し、範囲は0.0から1.0
-        chunk_size = st.slider('分割する文字数', 1000, 4000, 4000) # 初期値を4000に設定し、範囲は1000から4000
-        chunk_overlap = st.slider('重複する文字数', 0, 50, 20) # 初期値を20に設定し、範囲は1から50
-        model_name = st.selectbox('Model', ["gpt-3.5-turbo", "text-davinci-003"])
+        temperature = st.slider('出力の多様性', 0.0, 1.0, 0.0) 
+        chunk_size = st.slider('分割する文字数', 1000, 4000, 4000) 
+        chunk_overlap = st.slider('重複する文字数', 0, 50, 20) 
 
         if st.button("実行"):
 
             #テンプレートの準備
-            prompt_template_smr = """
-            回答は必ず日本語で教えてください。
-            以下の内容を簡潔に要約してください。
-            内容:{text}
-            回答：
-            """
-            prompt_smr = PromptTemplate(
-                template=prompt_template_smr, 
+            prompt_template_summary = """
+                            日本語で回答してください。
+                            以下の内容を要約してください。
+                            内容:{text}
+                            回答：
+                             """
+            
+            prompt_summary = PromptTemplate(
+                template=prompt_template_summary, 
                 input_variables=["text"]
                 )
             
             #要約のチェインを作成
-            if model_name == "gpt-3.5-turbo":
-                llm_smr = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=temperature)
-            else:
-                llm_smr = OpenAI(model_name="text-davinci-003", temperature=temperature)
-            text_splitter_smr = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-            texts_smr = text_splitter_smr.split_documents(documents)
+            llm_summary = ChatOpenAI(model_name="gpt-3.5-turbo", temperature=temperature)
+            text_splitter_summary = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+            texts_summary = text_splitter_summary.split_documents(documents)
             chain = load_summarize_chain(
-                            llm=llm_smr, 
+                            llm=llm_summary, 
                             chain_type="map_reduce",
-                            return_intermediate_steps=True,
-                            map_prompt=prompt_smr, 
-                            combine_prompt=prompt_smr
+                            return_intermediate_steps=False,
+                            map_prompt=prompt_summary, 
+                            combine_prompt=prompt_summary
                             )
             
             #要約された文章を表示
-            sammary = chain(texts_smr, return_only_outputs=True)
-            intermediate_steps_list = sammary['intermediate_steps']
-            for sentence in intermediate_steps_list:
-                st.write(sentence)
+            sammary = chain.run(texts_summary)
+            st.write(sammary)
+
 
 
     elif option == "質問":
@@ -189,11 +192,12 @@ if uploaded_file is not None:
 
                     #テンプレートの用意
                     template_qa = """
-                            あなたは優秀なアシスタントです。
-                            下記の質問に日本語で回答してください。
-                            質問：{question}
-                            回答：
-                            """
+                                あなたは優秀なアシスタントです。
+                                論文に記載されている内容について回答してください。
+                                日本語で回答してください。
+                                質問：{question}
+                                回答：
+                                """
 
                     prompt_qa = PromptTemplate(
                                 input_variables=["question"],
