@@ -7,4 +7,6 @@ Abstractの翻訳: 論文のAbstractを日本語に翻訳する機能。
 Q&A: 論文に関する質問に回答する機能。
 
 技術スタック
-OpeanAIのAPIを用いてChat
+OpeanAIのAPIを用いて、"gpt-3.5-turb"を用いて作成。
+フレームワークはLangChainを使用
+
